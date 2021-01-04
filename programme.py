@@ -1,5 +1,10 @@
 import pygame
 import pymunk
+import sqlite3
+import time
+
+con = sqlite3.connect('Data_Base.db')
+cur = con.cursor()
 
 pygame.init()
 display = pygame.display.set_mode((800, 800))
@@ -28,15 +33,42 @@ ball_radius = 30
 
 image = pygame.image.load('basketball.png')
 image = pygame.transform.scale(image, (ball_radius * 2, ball_radius * 2))
+
 image_basket = pygame.image.load('basket.png')
 image_basket = pygame.transform.scale(image_basket, (100, 100))
+
 image_fon = pygame.image.load('start_fon.jpg')
 fon = pygame.transform.scale(image_fon, (800, 800))
+
 image_shop = pygame.image.load('shop_fon.jpg')
 image_shop = pygame.transform.scale(image_shop, (800, 800))
 
+image_home_up = pygame.image.load('home_up.png')
+image_home_up = pygame.transform.scale(image_home_up, (60, 70))
 
-# класс для боковых и верхней стены, а также стен, которые мешают
+image_home_down = pygame.image.load('home_down.png')
+image_home_down = pygame.transform.scale(image_home_down, (60, 70))
+
+image_button_up = pygame.image.load('button_up.png')
+image_button_up = pygame.transform.scale(image_button_up, (280, 100))
+
+image_button_down = pygame.image.load('button_down.png')
+image_button_down = pygame.transform.scale(image_button_down, (280, 100))
+
+image_lock = pygame.image.load('lock2.png')
+image_lock = pygame.transform.scale(image_lock, (60, 70))
+
+image_volleyball = pygame.image.load('volleyball.png')
+image_volleyball = pygame.transform.scale(image_volleyball, (ball_radius * 2, ball_radius * 2))
+
+image_poo = pygame.image.load('poo.png')
+image_poo = pygame.transform.scale(image_poo, (ball_radius * 2, ball_radius * 2))
+
+image_smile = pygame.image.load('smile.png')
+image_smile = pygame.transform.scale(image_smile, (ball_radius * 2, ball_radius * 2))
+
+
+# класс для боковых стен, а также стен, которые мешают
 class Walls():
     def __init__(self):
         # display.blit(image_basket, (self.x, 700))
@@ -54,6 +86,12 @@ class Walls():
         # нижняя левая
         self.body = pymunk.Body(body_type=pymunk.Body.STATIC)
         self.shape = pymunk.Segment(self.body, (100, -30), (30, 0), 5)
+        self.shape.elasticity = 1
+        space.add(self.body, self.shape)
+
+        # нижняя левая
+        self.body = pymunk.Body(body_type=pymunk.Body.STATIC)
+        self.shape = pymunk.Segment(self.body, (800, 0), (680, -30), 5)
         self.shape.elasticity = 1
         space.add(self.body, self.shape)
 
@@ -84,14 +122,16 @@ class Ball():
                 space.remove(self.body, self.shape)
             # если попал в кольцо, мяч исчезает
             if int(x) - ball_radius > coords_floor[0]:
-                if int(x) - ball_radius - coords_floor[0] < 30 and int(y) - ball_radius >= 635:
+                # print(coords_floor[0] ,int(x) - ball_radius, int(y)- ball_radius ,ball_radius)
+                if int(x) - ball_radius - coords_floor[0] < 50 and int(y) - ball_radius >= 635 \
+                        and int(y) - ball_radius <= 650:
                     space.remove(self.body, self.shape)
                     return None
             else:
-                if coords_floor[0] - int(x) < 15 and int(y) - ball_radius >= 635:
+                if coords_floor[0] - int(x) + ball_radius < 15 and int(y) - ball_radius >= 635 \
+                        and int(y) - ball_radius <= 650:
                     space.remove(self.body, self.shape)
                     return None
-                    # print(coords_floor[0] ,int(x), int(y) ,ball_radius)
         except BaseException:
             return False
         return True
@@ -129,49 +169,80 @@ class Floor():
         return self.x, self.y
 
 
-# завершение игры
-def terminate():
-    pygame.quit()
-
-
 # стартовый экран
 def start_screen():
-    display.blit(fon, (0, 0))
+    display.fill(pygame.Color(85, 85, 85))
+    display.blit(image_button_up, (250, 265))
+    display.blit(image_button_up, (250, 400))
+    text = num.render(f'record: {cur.execute("SELECT record FROM info").fetchone()[0]}', True, (0, 255, 255))
+    display.blit(text, (245, 515))
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return 'Stop'
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 # print(event.pos)
-                if (event.pos[0] >= 151 and event.pos[1] >= 221) and (event.pos[0] <= 649 and event.pos[1] <= 320):
+                if (event.pos[0] >= 252 and event.pos[1] >= 267) and (event.pos[0] <= 520 and event.pos[1] <= 364):
                     return 'Play'
-                elif (event.pos[0] >= 151 and event.pos[1] >= 432) and (event.pos[0] <= 649 and event.pos[1] <= 533):
+                elif (event.pos[0] >= 252 and event.pos[1] >= 403) and (event.pos[0] <= 520 and event.pos[1] <= 495):
                     return 'Shop'
+            elif event.type == pygame.MOUSEMOTION:
+                if (event.pos[0] >= 252 and event.pos[1] >= 267) and (event.pos[0] <= 520 and event.pos[1] <= 364):
+                    display.blit(image_button_down, (250, 265))
+                else:
+                    display.blit(image_button_up, (250, 265))
 
+                if (event.pos[0] >= 252 and event.pos[1] >= 403) and (event.pos[0] <= 520 and event.pos[1] <= 495):
+                    display.blit(image_button_down, (250, 400))
+                else:
+                    display.blit(image_button_up, (250, 400))
+        text = num.render('PLAY', True, (0, 245, 235))
+        display.blit(text, (305, 278))
+        text = num.render('SHOP', True, (0, 245, 235))
+        display.blit(text, (305, 415))
         pygame.display.flip()
         clock.tick(FPS)
 
 
 def shop_screen():
-    display.blit(image_shop, (0, 0))
+    display.fill(pygame.Color(85, 85, 85))
+    display.blit(image_home_up, (10, 10))
+    display.blit(image, (200, 350))
+    display.blit(image_volleyball, (300, 350))
+    display.blit(image_poo, (400, 350))
+    display.blit(image_smile, (500, 350))
+    text = num.render(f'coins: {cur.execute("SELECT coins FROM info").fetchone()[0]}', True, (0, 255, 255))
+    display.blit(text, (260, 10))
+    if cur.execute("SELECT opened FROM balls WHERE ball_name == 'volleyball.png'").fetchone()[0] == 'no':
+        display.blit(image_lock, (300, 270))
+    if cur.execute("SELECT opened FROM balls WHERE ball_name == 'poo.png'").fetchone()[0] == 'no':
+        display.blit(image_lock, (400, 270))
+    if cur.execute("SELECT opened FROM balls WHERE ball_name == 'smile.png'").fetchone()[0] == 'no':
+        display.blit(image_lock, (500, 270))
+
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return 'Stop'
             elif event.type == pygame.MOUSEBUTTONDOWN:
-                print(event.pos)
-                if (event.pos[0] >= 30 and event.pos[1] >= 25) and (event.pos[0] <= 162 and event.pos[1] <= 80):
+                if (event.pos[0] >= 21 and event.pos[1] >= 20) and (event.pos[0] <= 65 and event.pos[1] <= 80):
                     return 'Home'
-
+            elif event.type == pygame.MOUSEMOTION:
+                if (event.pos[0] >= 21 and event.pos[1] >= 20) and (event.pos[0] <= 65 and event.pos[1] <= 80):
+                    display.blit(image_home_down, (10, 10))
+                else:
+                    display.blit(image_home_up, (10, 10))
         pygame.display.flip()
         clock.tick(FPS)
 
 
+sec = 0
 walls = Walls()
 floor = Floor()
 pack_balls = list()
 PAUSE = False
 START = False
+
 while running:
     while not START:
         START = start_screen()
@@ -205,9 +276,8 @@ while running:
             # рисуем стены
             walls.draw()
             # счётчик набранных очков
-            text = num.render(f'{n}', True,
-                              (200, 0, 0))
-            display.blit(text, (700, 50))
+            text = num.render(f'{n}', True, (200, 0, 0))
+            display.blit(text, (670, 50))
             pygame.display.update()
             clock.tick(FPS)
             pygame.event.pump()
@@ -221,14 +291,12 @@ while running:
                     if event.key == pygame.K_ESCAPE:
                         PAUSE = not PAUSE
                 elif event.type == pygame.MOUSEBUTTONDOWN:
-                    print(event.pos)
-                    if (event.pos[0] >= 290 and event.pos[1] >= 350) and (event.pos[0] <= 420 and event.pos[1] <= 410):
+                    if (event.pos[0] >= 340 and event.pos[1] >= 350) and (event.pos[0] <= 481 and event.pos[1] <= 410):
                         START = False
                         PAUSE = not PAUSE
-            text = num.render('PAUSE', True,
-                              (255, 255, 255))
-            text_home = num.render('home', True,
-                                   (0, 255, 255))
+                        pack_balls = list()
+            text = num.render('PAUSE', True, (255, 255, 255))
+            text_home = num.render('  home', True, (0, 255, 255))
             display.blit(text, (290, 300))
             display.blit(text_home, (290, 350))
             pygame.display.update()
