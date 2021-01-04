@@ -206,6 +206,8 @@ def start_screen():
 
 def shop_screen():
     display.fill(pygame.Color(85, 85, 85))
+    display.blit(image_button_up, (250, 600))
+    text_buy = num.render('  buy', True, (0, 255, 255))
     display.blit(image_home_up, (10, 10))
     display.blit(image, (200, 350))
     display.blit(image_volleyball, (300, 350))
@@ -219,7 +221,8 @@ def shop_screen():
         display.blit(image_lock, (400, 270))
     if cur.execute("SELECT opened FROM balls WHERE ball_name == 'smile.png'").fetchone()[0] == 'no':
         display.blit(image_lock, (500, 270))
-
+    choose = [[180, 250], [282, 250], [382, 250], [482, 250]]
+    pack_choose = [True, False, False, False]
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -227,11 +230,39 @@ def shop_screen():
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if (event.pos[0] >= 21 and event.pos[1] >= 20) and (event.pos[0] <= 65 and event.pos[1] <= 80):
                     return 'Home'
+                # здесь выбираем скин
+                elif event.pos[0] >= 180 and event.pos[1] >= 255 and event.pos[0] <= 275 and event.pos[1] <= 400:
+                    pack_choose = [True, False, False, False]
+                elif event.pos[0] >= 300 and event.pos[1] >= 250 and event.pos[0] <= 380 and event.pos[1] <= 400:
+                    pack_choose = [False, True, False, False]
+                elif event.pos[0] >= 400 and event.pos[1] >= 250 and event.pos[0] <= 465 and event.pos[1] <= 400:
+                    pack_choose = [False, False, True, False]
+                elif event.pos[0] >= 500 and event.pos[1] >= 250 and event.pos[0] <= 570 and event.pos[1] <= 400:
+                    pack_choose = [False, False, False, True]
             elif event.type == pygame.MOUSEMOTION:
+                # кнопка домой
                 if (event.pos[0] >= 21 and event.pos[1] >= 20) and (event.pos[0] <= 65 and event.pos[1] <= 80):
                     display.blit(image_home_down, (10, 10))
                 else:
                     display.blit(image_home_up, (10, 10))
+                # кнопка покупки
+                if event.pos[0] >= 250 and event.pos[1] >= 600 and event.pos[0] <= 530 and event.pos[1] <= 700:
+                    display.blit(image_button_down, (250, 600))
+                else:
+                    display.blit(image_button_up, (250, 600))
+                # описать процесс покупки , случаи если не хватает денег , успешная покупка, работа с бд
+                #
+                #
+                #
+
+        # 2 цикла для корректного отображения выбранного элемента(с 1 циклом некрасиво получается)
+        for i in range(len(pack_choose)):
+            if not pack_choose[i]:
+                pygame.draw.rect(display, (85, 85, 85), (choose[i][0], choose[i][1], 100, 175), 3)
+        for i in range(len(pack_choose)):
+            if pack_choose[i]:
+                pygame.draw.rect(display, (0, 255, 255), (choose[i][0], choose[i][1], 100, 175), 3)
+        display.blit(text_buy, (283, 607))
         pygame.display.flip()
         clock.tick(FPS)
 
