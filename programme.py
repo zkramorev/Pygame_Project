@@ -75,6 +75,10 @@ image_heart = pygame.transform.scale(image_heart, (35, 30))
 
 sound_net = pygame.mixer.Sound('sound_net.wav')
 sound_ou = pygame.mixer.Sound('sound_ou.wav')
+sound_game_over = pygame.mixer.Sound('game_over.wav')
+sound_game_over.set_volume(0.2)
+sound_buy = pygame.mixer.Sound('sound_buy.wav')
+sound_click = pygame.mixer.Sound('sound_click.wav')
 
 
 # класс для боковых стен, а также стен, которые мешают
@@ -196,8 +200,10 @@ def start_screen():
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 # print(event.pos)
                 if (event.pos[0] >= 252 and event.pos[1] >= 267) and (event.pos[0] <= 520 and event.pos[1] <= 364):
+                    sound_click.play()
                     return 'Play'
                 elif (event.pos[0] >= 252 and event.pos[1] >= 403) and (event.pos[0] <= 520 and event.pos[1] <= 495):
+                    sound_click.play()
                     return 'Shop'
             elif event.type == pygame.MOUSEMOTION:
                 if (event.pos[0] >= 252 and event.pos[1] >= 267) and (event.pos[0] <= 520 and event.pos[1] <= 364):
@@ -225,6 +231,7 @@ def shopping(pack_choose):
     opened = cur.execute(f"SELECT opened FROM balls WHERE id = {idd}").fetchone()[0]
     if opened == 'no' and int(coins) >= int(price):
         print('УСПЕШНО')
+        sound_buy.play()
         cur.execute(f"UPDATE info SET coins = {coins - price}")
         cur.execute(f"UPDATE info SET coins = {coins - price}")
         cur.execute(f"UPDATE balls SET opened = 'yes' WHERE id = {idd}")
@@ -304,19 +311,25 @@ def shop_screen():
                 return 'Stop'
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if (event.pos[0] >= 21 and event.pos[1] >= 20) and (event.pos[0] <= 65 and event.pos[1] <= 80):
+                    sound_click.play()
                     return 'Home'
                 # здесь выбираем скин
                 elif event.pos[0] >= 180 and event.pos[1] >= 255 and event.pos[0] <= 275 and event.pos[1] <= 400:
                     pack_choose = [True, False, False, False]
+                    sound_click.play()
                 elif event.pos[0] >= 300 and event.pos[1] >= 250 and event.pos[0] <= 380 and event.pos[1] <= 400:
                     pack_choose = [False, True, False, False]
+                    sound_click.play()
                 elif event.pos[0] >= 400 and event.pos[1] >= 250 and event.pos[0] <= 465 and event.pos[1] <= 400:
                     pack_choose = [False, False, True, False]
+                    sound_click.play()
                 elif event.pos[0] >= 500 and event.pos[1] >= 250 and event.pos[0] <= 570 and event.pos[1] <= 400:
                     pack_choose = [False, False, False, True]
+                    sound_click.play()
                 # нажатие на кнопку 'BUY'
                 elif event.pos[0] >= 250 and event.pos[1] >= 600 and event.pos[0] <= 530 and event.pos[1] <= 700:
                     # описать успешная ли покупка или нет
+                    sound_click.play()
                     if shopping(pack_choose):
                         lock()
                     else:
@@ -353,40 +366,42 @@ pack_balls = list()
 PAUSE = False
 START = False
 UPDATE_SKIN = True
+DIE = False
 while running:
     while not START:
         START = start_screen()
     if START == 'Play':
-        if UPDATE_SKIN:
-            image_ball = pygame.image.load(cur.execute("SELECT ball_name FROM info").fetchone()[0])
-            image_ball = pygame.transform.scale(image_ball, (ball_radius * 2, ball_radius * 2))
-            UPDATE_SKIN = False
-        if not PAUSE:
-            display.fill((0, 0, 0))
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    running = False
-                elif event.type == pygame.MOUSEBUTTONDOWN:
-                    pack_balls.append(Ball(event.pos))
-                # pause
-                elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE:
-                        PAUSE = not PAUSE
-            # перемещение кольца
-            if pygame.key.get_pressed()[pygame.K_LEFT]:
-                floor.move('left')
-            if pygame.key.get_pressed()[pygame.K_RIGHT]:
-                floor.move('right')
-            # отрисовываем мячи и удаляем мячи, которые выпали из мира
-            for i in range(len(pack_balls)):
-                if pack_balls[i]:
-                    s = pack_balls[i].draw_update(floor.coords())
-                    if s == 'live':
-                        live -= 1
-                    elif s is None:
-                        n += 1
-                    elif not s:
-                        pack_balls[i] = False
+        if not DIE:
+            if UPDATE_SKIN:
+                image_ball = pygame.image.load(cur.execute("SELECT ball_name FROM info").fetchone()[0])
+                image_ball = pygame.transform.scale(image_ball, (ball_radius * 2, ball_radius * 2))
+                UPDATE_SKIN = False
+            if not PAUSE:
+                display.fill((0, 0, 0))
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        running = False
+                    elif event.type == pygame.MOUSEBUTTONDOWN:
+                        pack_balls.append(Ball(event.pos))
+                    # pause
+                    elif event.type == pygame.KEYDOWN:
+                        if event.key == pygame.K_ESCAPE:
+                            PAUSE = not PAUSE
+                # перемещение кольца
+                if pygame.key.get_pressed()[pygame.K_LEFT]:
+                    floor.move('left')
+                if pygame.key.get_pressed()[pygame.K_RIGHT]:
+                    floor.move('right')
+                # отрисовываем мячи и удаляем мячи, которые выпали из мира
+                for i in range(len(pack_balls)):
+                    if pack_balls[i]:
+                        s = pack_balls[i].draw_update(floor.coords())
+                        if s == 'live':
+                            live -= 1
+                        elif s is None:
+                            n += 1
+                        elif not s:
+                            pack_balls[i] = False
             # рисуем кольцо
             floor.draw()
             # рисуем стены
@@ -402,28 +417,35 @@ while running:
                     x += 40
             else:
                 print('die')
+                DIE = True
             pygame.display.update()
             clock.tick(FPS)
             pygame.event.pump()
             space.step(1 / FPS)
         else:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    running = False
-                # pause
-                elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE:
-                        PAUSE = not PAUSE
-                elif event.type == pygame.MOUSEBUTTONDOWN:
-                    if (event.pos[0] >= 340 and event.pos[1] >= 350) and (event.pos[0] <= 481 and event.pos[1] <= 410):
-                        START = False
-                        PAUSE = not PAUSE
-                        pack_balls = list()
-            text = num.render('PAUSE', True, (255, 255, 255))
-            text_home = num.render('  home', True, (0, 255, 255))
-            display.blit(text, (290, 300))
-            display.blit(text_home, (290, 350))
-            pygame.display.update()
+            print(DIE, PAUSE)
+            if PAUSE:
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        running = False
+                    # pause
+                    elif event.type == pygame.KEYDOWN:
+                        if event.key == pygame.K_ESCAPE:
+                            PAUSE = not PAUSE
+                    elif event.type == pygame.MOUSEBUTTONDOWN:
+                        if (event.pos[0] >= 340 and event.pos[1] >= 350) and (
+                                event.pos[0] <= 481 and event.pos[1] <= 410):
+                            START = False
+                            PAUSE = not PAUSE
+                            pack_balls = list()
+                text = num.render('PAUSE', True, (255, 255, 255))
+                text_home = num.render('  home', True, (0, 255, 255))
+                display.blit(text, (290, 300))
+                display.blit(text_home, (290, 350))
+                pygame.display.update()
+            else:
+                print('game over')
+                sound_game_over.play()
     elif START == 'Stop':
         running = False
     elif START == 'Shop':
