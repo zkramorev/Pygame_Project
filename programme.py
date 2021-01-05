@@ -1,7 +1,6 @@
 import pygame
 import pymunk
 import sqlite3
-import time
 
 con = sqlite3.connect('Data_Base.db')
 cur = con.cursor()
@@ -23,11 +22,6 @@ pygame.display.set_icon(ICON)
 
 # размер и шрифт текста
 num = pygame.font.Font('font.ttf', 65)
-
-
-def convert_coordinates(point):
-    return point[0], 800 - point[1]
-
 
 ball_radius = 30
 
@@ -81,6 +75,10 @@ sound_buy = pygame.mixer.Sound('sound_buy.wav')
 sound_click = pygame.mixer.Sound('sound_click.wav')
 
 
+def convert_coordinates(point):
+    return point[0], 800 - point[1]
+
+
 # класс для боковых стен, а также стен, которые мешают
 class Walls():
     def __init__(self):
@@ -127,9 +125,7 @@ class Ball():
         try:
             # часть рисования
             x, y = convert_coordinates(self.body.position)
-            # pygame.draw.circle(display, (255, 0, 0), (int(x), int(y)), ball_radius)
             display.blit(image_ball, (int(x) - ball_radius, int(y) - ball_radius))
-            # print(int(x) - ball_radius, int(y) - ball_radius, coords_floor, ball_radius)
             # удалить тех, кто выпал из мира
             if int(x) - ball_radius > 900 or int(x) - ball_radius < -100 or int(y) - ball_radius > 900:
                 space.remove(self.body, self.shape)
@@ -137,7 +133,6 @@ class Ball():
                 return 'live'
             # если попал в кольцо, мяч исчезает
             if int(x) - ball_radius > coords_floor[0]:
-                # print(coords_floor[0] ,int(x) - ball_radius, int(y)- ball_radius ,ball_radius)
                 if int(x) - ball_radius - coords_floor[0] < 50 and int(y) - ball_radius >= 635 \
                         and int(y) - ball_radius <= 650:
                     space.remove(self.body, self.shape)
@@ -170,7 +165,6 @@ class Floor():
         self.shape = pymunk.Segment(self.body, (self.x, 100), (self.y, 100), 5)
         self.shape.elasticity = 1
         space.add(self.body, self.shape)
-        # pygame.draw.line(display, (0, 0, 0), (self.x, 700), (self.y, 700), 5)
 
     def move(self, where):
         if where == 'right':
@@ -230,7 +224,6 @@ def shopping(pack_choose):
     price = cur.execute(f"SELECT ball_price FROM balls WHERE id = {idd}").fetchone()[0]
     opened = cur.execute(f"SELECT opened FROM balls WHERE id = {idd}").fetchone()[0]
     if opened == 'no' and int(coins) >= int(price):
-        print('УСПЕШНО')
         sound_buy.play()
         cur.execute(f"UPDATE info SET coins = {coins - price}")
         cur.execute(f"UPDATE info SET coins = {coins - price}")
@@ -359,7 +352,6 @@ def shop_screen():
 
 
 live = 5
-sec = 0
 walls = Walls()
 floor = Floor()
 pack_balls = list()
@@ -371,7 +363,7 @@ while running:
     while not START:
         START = start_screen()
     if START == 'Play':
-        if not DIE:
+        if not DIE and not PAUSE:
             if UPDATE_SKIN:
                 image_ball = pygame.image.load(cur.execute("SELECT ball_name FROM info").fetchone()[0])
                 image_ball = pygame.transform.scale(image_ball, (ball_radius * 2, ball_radius * 2))
@@ -387,10 +379,11 @@ while running:
                     elif event.type == pygame.KEYDOWN:
                         if event.key == pygame.K_ESCAPE:
                             PAUSE = not PAUSE
+                            sound_click.play()
                 # перемещение кольца
-                if pygame.key.get_pressed()[pygame.K_LEFT]:
+                if pygame.key.get_pressed()[pygame.K_LEFT] or pygame.key.get_pressed()[pygame.K_a]:
                     floor.move('left')
-                if pygame.key.get_pressed()[pygame.K_RIGHT]:
+                if pygame.key.get_pressed()[pygame.K_RIGHT] or pygame.key.get_pressed()[pygame.K_d]:
                     floor.move('right')
                 # отрисовываем мячи и удаляем мячи, которые выпали из мира
                 for i in range(len(pack_balls)):
@@ -416,14 +409,12 @@ while running:
                     display.blit(image_heart, (x, 10))
                     x += 40
             else:
-                print('die')
                 DIE = True
             pygame.display.update()
             clock.tick(FPS)
             pygame.event.pump()
             space.step(1 / FPS)
         else:
-            print(DIE, PAUSE)
             if PAUSE:
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
@@ -432,9 +423,11 @@ while running:
                     elif event.type == pygame.KEYDOWN:
                         if event.key == pygame.K_ESCAPE:
                             PAUSE = not PAUSE
+                            sound_click.play()
                     elif event.type == pygame.MOUSEBUTTONDOWN:
                         if (event.pos[0] >= 340 and event.pos[1] >= 350) and (
                                 event.pos[0] <= 481 and event.pos[1] <= 410):
+                            sound_click.play()
                             START = False
                             PAUSE = not PAUSE
                             pack_balls = list()
@@ -443,9 +436,42 @@ while running:
                 display.blit(text, (290, 300))
                 display.blit(text_home, (290, 350))
                 pygame.display.update()
-            else:
-                print('game over')
+            elif DIE:
                 sound_game_over.play()
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        running = False
+                    elif event.type == pygame.MOUSEBUTTONDOWN:
+                        if (event.pos[0] >= 311 and event.pos[1] >= 360) and (
+                                event.pos[0] <= 450 and event.pos[1] <= 400):
+                            START = False
+                            DIE = False
+                            pack_balls = list()
+                            live = 5
+                            sound_click.play()
+                        elif (event.pos[0] >= 265 and event.pos[1] >= 405) and (
+                                event.pos[0] <= 530 and event.pos[1] <= 445):
+                            DIE = False
+                            live = 5
+                            pack_balls = list()
+                            sound_click.play()
+                text = num.render('game over', True, (255, 255, 255))
+                text_home = num.render('  home', True, (0, 255, 255))
+                text_new_game = num.render('new game', True, (0, 255, 255))
+                text_score = num.render('score: ', True, (255, 255, 255))
+                # обновление рекорда
+                record = cur.execute(f"SELECT record FROM info").fetchone()[0]
+                if n > record:
+                    text_record = num.render(f'NEW RECORD: {n}', True, (0, 255, 0))
+                    display.blit(text_record, (180, 180))
+                    cur.execute(f"UPDATE info SET record = {n}")
+                    n = 0
+                    con.commit()
+                display.blit(text, (260, 285))
+                display.blit(text_home, (260, 335))
+                display.blit(text_score, (480, 50))
+                display.blit(text_new_game, (260, 385))
+                pygame.display.update()
     elif START == 'Stop':
         running = False
     elif START == 'Shop':
