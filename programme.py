@@ -1,8 +1,9 @@
 import pygame
 import pymunk
 import sqlite3
+import random
 
-con = sqlite3.connect('Data_Base.db')
+con = sqlite3.connect('data/Data_Base.db')
 cur = con.cursor()
 
 pygame.init()
@@ -10,69 +11,67 @@ display = pygame.display.set_mode((800, 800))
 pygame.display.set_caption('BASKETBALL')
 clock = pygame.time.Clock()
 space = pymunk.Space()
-space.gravity = 0, -850
+space.gravity = 0, -900
 FPS = 80
 running = True
 # кол-во очков
 n = 0
 
 # установка иконки приложения
-ICON = pygame.image.load('icon.png')
+ICON = pygame.image.load('data/icon.png')
 pygame.display.set_icon(ICON)
 
 # размер и шрифт текста
-num = pygame.font.Font('font.ttf', 65)
+num = pygame.font.Font('data/font.ttf', 65)
 
 ball_radius = 30
 
-image_ball = pygame.image.load(cur.execute("SELECT ball_name FROM info").fetchone()[0])
+image_ball = pygame.image.load('data/' + cur.execute("SELECT ball_name FROM info").fetchone()[0])
 image_ball = pygame.transform.scale(image_ball, (ball_radius * 2, ball_radius * 2))
 
-image = pygame.image.load('basketball.png')
+image = pygame.image.load('data/basketball.png')
 image = pygame.transform.scale(image, (ball_radius * 2, ball_radius * 2))
 
-image_basket = pygame.image.load('basket.png')
+image_basket = pygame.image.load('data/basket.png')
 image_basket = pygame.transform.scale(image_basket, (100, 100))
 
-image_fon = pygame.image.load('start_fon.jpg')
-fon = pygame.transform.scale(image_fon, (800, 800))
-
-image_shop = pygame.image.load('shop_fon.jpg')
-image_shop = pygame.transform.scale(image_shop, (800, 800))
-
-image_home_up = pygame.image.load('home_up.png')
+image_home_up = pygame.image.load('data/home_up.png')
 image_home_up = pygame.transform.scale(image_home_up, (60, 70))
 
-image_home_down = pygame.image.load('home_down.png')
+image_home_down = pygame.image.load('data/home_down.png')
 image_home_down = pygame.transform.scale(image_home_down, (60, 70))
 
-image_button_up = pygame.image.load('button_up.png')
+image_button_up = pygame.image.load('data/button_up.png')
 image_button_up = pygame.transform.scale(image_button_up, (280, 100))
 
-image_button_down = pygame.image.load('button_down.png')
+image_button_down = pygame.image.load('data/button_down.png')
 image_button_down = pygame.transform.scale(image_button_down, (280, 100))
 
-image_lock = pygame.image.load('lock2.png')
+image_lock = pygame.image.load('data/lock2.png')
 image_lock = pygame.transform.scale(image_lock, (60, 70))
 
-image_volleyball = pygame.image.load('volleyball.png')
+image_volleyball = pygame.image.load('data/volleyball.png')
 image_volleyball = pygame.transform.scale(image_volleyball, (ball_radius * 2, ball_radius * 2))
 
-image_poo = pygame.image.load('poo.png')
+image_poo = pygame.image.load('data/poo.png')
 image_poo = pygame.transform.scale(image_poo, (ball_radius * 2, ball_radius * 2))
 
-image_smile = pygame.image.load('smile.png')
+image_smile = pygame.image.load('data/smile.png')
 image_smile = pygame.transform.scale(image_smile, (ball_radius * 2, ball_radius * 2))
 
-image_heart = pygame.image.load('heart.png')
+image_heart = pygame.image.load('data/heart.png')
 image_heart = pygame.transform.scale(image_heart, (35, 30))
 
-sound_net = pygame.mixer.Sound('sound_net.wav')
-sound_ou = pygame.mixer.Sound('sound_ou.wav')
-sound_game_over = pygame.mixer.Sound('game_over.wav')
+sound_net = pygame.mixer.Sound('data/sound_net.wav')
+
+sound_ou = pygame.mixer.Sound('data/sound_ou.wav')
+
+sound_game_over = pygame.mixer.Sound('data/game_over.wav')
 sound_game_over.set_volume(0.2)
-sound_buy = pygame.mixer.Sound('sound_buy.wav')
-sound_click = pygame.mixer.Sound('sound_click.wav')
+
+sound_buy = pygame.mixer.Sound('data/sound_buy.wav')
+
+sound_click = pygame.mixer.Sound('data/sound_click.wav')
 
 
 def convert_coordinates(point):
@@ -82,40 +81,44 @@ def convert_coordinates(point):
 # класс для боковых стен, а также стен, которые мешают
 class Walls():
     def __init__(self):
-        # display.blit(image_basket, (self.x, 700))
-        # space.remove(self.body, self.shape)
         # левая
-        self.body = pymunk.Body(body_type=pymunk.Body.STATIC)
-        self.shape = pymunk.Segment(self.body, (10, 0), (10, 800), 5)
-        self.shape.elasticity = 1
-        space.add(self.body, self.shape)
+        self.add((10, 0), (10, 800), 1)
         # правая
-        self.body = pymunk.Body(body_type=pymunk.Body.STATIC)
-        self.shape = pymunk.Segment(self.body, (790, 0), (790, 800), 5)
-        self.shape.elasticity = 1
-        space.add(self.body, self.shape)
+        self.add((790, 0), (790, 800), 1)
         # нижняя левая
-        self.body = pymunk.Body(body_type=pymunk.Body.STATIC)
-        self.shape = pymunk.Segment(self.body, (100, -30), (30, 0), 5)
-        self.shape.elasticity = 1
-        space.add(self.body, self.shape)
-
+        self.add((100, 830), (30, 800), 0.85)
         # нижняя левая
-        self.body = pymunk.Body(body_type=pymunk.Body.STATIC)
-        self.shape = pymunk.Segment(self.body, (800, 0), (680, -30), 5)
-        self.shape.elasticity = 1
-        space.add(self.body, self.shape)
+        self.add((800, 800), (680, 830), 0.85)
+        # генерация препядствий
+        self.x1, self.y1 = random.randint(30, 100), random.randint(85, 215)
+        self.x2, self.y2 = random.randint(200, 280), random.randint(200, 280)
+        self.add((self.x1, self.y1), (self.x2, self.y2), 0.6)
+        self.x3, self.y3 = random.randint(670, 690), random.randint(250, 270)
+        self.x4, self.y4 = random.randint(580, 590), random.randint(290, 320)
+        self.add((self.x3, self.y3), (self.x4, self.y4), 0.6)
+        self.x5, self.y5 = random.randint(325, 450), random.randint(60, 150)
+        self.x6, self.y6 = random.randint(320, 450), random.randint(70, 160)
+        self.add((self.x5, self.y5), (self.x6, self.y6), 0.6)
 
     def draw(self):
+        pygame.draw.line(display, (5, 200, 130), (self.x1, self.y1), (self.x2, self.y2), 5)
+        pygame.draw.line(display, (5, 200, 130), (self.x3, self.y3), (self.x4, self.y4), 5)
+        pygame.draw.line(display, (5, 200, 130), (self.x5, self.y5), (self.x6, self.y6), 5)
         pygame.draw.line(display, (255, 0, 0), (0, -10), (0, 800), 5)
         pygame.draw.line(display, (255, 0, 0), (798, -15), (798, 800), 5)
+
+    def add(self, x, y, koef):
+        self.body = pymunk.Body(body_type=pymunk.Body.STATIC)
+        self.shape = pymunk.Segment(self.body, (x[0], 800 - x[1]), (y[0], 800 - y[1]), 1)
+        self.shape.elasticity = koef
+        space.add(self.body, self.shape)
 
 
 # класс для мячей
 class Ball():
-    def __init__(self, pos):
+    def __init__(self):
         self.body = pymunk.Body()
-        self.body.position = pos[0], 800 - pos[1]
+        self.body.position = random.randint(30, 770), 850
         self.shape = pymunk.Circle(self.body, ball_radius)
         self.shape.density = 1
         self.shape.elasticity = 1
@@ -185,8 +188,10 @@ def start_screen():
     display.fill(pygame.Color(85, 85, 85))
     display.blit(image_button_up, (250, 265))
     display.blit(image_button_up, (250, 400))
-    text = num.render(f'record: {cur.execute("SELECT record FROM info").fetchone()[0]}', True, (0, 255, 255))
+    text = num.render(f'record: {cur.execute("SELECT record FROM info").fetchone()[0]}', True, (0, 200, 200))
     display.blit(text, (245, 515))
+    text = num.render(f'coins: {cur.execute("SELECT coins FROM info").fetchone()[0]}', True, (0, 200, 200))
+    display.blit(text, (245, 575))
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -359,13 +364,24 @@ PAUSE = False
 START = False
 UPDATE_SKIN = True
 DIE = False
+# Чтобы музыка мосле проигрыша воспроизводилась 1 раз
+ONE_TIME = True
+# Для корректного отображения заработанных монет
+n_UPDATE = True
+# Счетчик для генерации мячей, пееменная для ускорения генерации мячей
+j, a = 200, 200
 while running:
     while not START:
         START = start_screen()
     if START == 'Play':
         if not DIE and not PAUSE:
+            j += 1
+            if j - a > 0:
+                j = 0
+                a += 2
+                pack_balls.append(Ball())
             if UPDATE_SKIN:
-                image_ball = pygame.image.load(cur.execute("SELECT ball_name FROM info").fetchone()[0])
+                image_ball = pygame.image.load('data/' + cur.execute("SELECT ball_name FROM info").fetchone()[0])
                 image_ball = pygame.transform.scale(image_ball, (ball_radius * 2, ball_radius * 2))
                 UPDATE_SKIN = False
             if not PAUSE:
@@ -373,8 +389,6 @@ while running:
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
                         running = False
-                    elif event.type == pygame.MOUSEBUTTONDOWN:
-                        pack_balls.append(Ball(event.pos))
                     # pause
                     elif event.type == pygame.KEYDOWN:
                         if event.key == pygame.K_ESCAPE:
@@ -410,6 +424,8 @@ while running:
                     x += 40
             else:
                 DIE = True
+                ONE_TIME = True
+                n_UPDATE = True
             pygame.display.update()
             clock.tick(FPS)
             pygame.event.pump()
@@ -437,7 +453,9 @@ while running:
                 display.blit(text_home, (290, 350))
                 pygame.display.update()
             elif DIE:
-                sound_game_over.play()
+                if ONE_TIME:
+                    sound_game_over.play()
+                    ONE_TIME = False
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
                         running = False
@@ -460,13 +478,23 @@ while running:
                 text_new_game = num.render('new game', True, (0, 255, 255))
                 text_score = num.render('score: ', True, (255, 255, 255))
                 # обновление рекорда
+                if n_UPDATE:
+                    coins = n // 10
+                    cur.execute(f"UPDATE info SET coins = coins + {coins}")
+                    con.commit()
+                    n_UPDATE = False
                 record = cur.execute(f"SELECT record FROM info").fetchone()[0]
+                if coins < 2:
+                    text_plus_coins = num.render(f'+{coins}', True, (255, 255, 0))
+                else:
+                    text_plus_coins = num.render(f'+{coins}', True, (255, 255, 0))
                 if n > record:
                     text_record = num.render(f'NEW RECORD: {n}', True, (0, 255, 0))
                     display.blit(text_record, (180, 180))
                     cur.execute(f"UPDATE info SET record = {n}")
-                    n = 0
                     con.commit()
+                n = 0
+                display.blit(text_plus_coins, (320, 445))
                 display.blit(text, (260, 285))
                 display.blit(text_home, (260, 335))
                 display.blit(text_score, (480, 50))
