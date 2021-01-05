@@ -31,6 +31,9 @@ def convert_coordinates(point):
 
 ball_radius = 30
 
+image_ball = pygame.image.load(cur.execute("SELECT ball_name FROM info").fetchone()[0])
+image_ball = pygame.transform.scale(image_ball, (ball_radius * 2, ball_radius * 2))
+
 image = pygame.image.load('basketball.png')
 image = pygame.transform.scale(image, (ball_radius * 2, ball_radius * 2))
 
@@ -66,6 +69,12 @@ image_poo = pygame.transform.scale(image_poo, (ball_radius * 2, ball_radius * 2)
 
 image_smile = pygame.image.load('smile.png')
 image_smile = pygame.transform.scale(image_smile, (ball_radius * 2, ball_radius * 2))
+
+image_heart = pygame.image.load('heart.png')
+image_heart = pygame.transform.scale(image_heart, (35, 30))
+
+sound_net = pygame.mixer.Sound('sound_net.wav')
+sound_ou = pygame.mixer.Sound('sound_ou.wav')
 
 
 # класс для боковых стен, а также стен, которые мешают
@@ -115,22 +124,26 @@ class Ball():
             # часть рисования
             x, y = convert_coordinates(self.body.position)
             # pygame.draw.circle(display, (255, 0, 0), (int(x), int(y)), ball_radius)
-            display.blit(image, (int(x) - ball_radius, int(y) - ball_radius))
+            display.blit(image_ball, (int(x) - ball_radius, int(y) - ball_radius))
             # print(int(x) - ball_radius, int(y) - ball_radius, coords_floor, ball_radius)
             # удалить тех, кто выпал из мира
             if int(x) - ball_radius > 900 or int(x) - ball_radius < -100 or int(y) - ball_radius > 900:
                 space.remove(self.body, self.shape)
+                sound_ou.play()
+                return 'live'
             # если попал в кольцо, мяч исчезает
             if int(x) - ball_radius > coords_floor[0]:
                 # print(coords_floor[0] ,int(x) - ball_radius, int(y)- ball_radius ,ball_radius)
                 if int(x) - ball_radius - coords_floor[0] < 50 and int(y) - ball_radius >= 635 \
                         and int(y) - ball_radius <= 650:
                     space.remove(self.body, self.shape)
+                    sound_net.play()
                     return None
             else:
                 if coords_floor[0] - int(x) + ball_radius < 15 and int(y) - ball_radius >= 635 \
                         and int(y) - ball_radius <= 650:
                     space.remove(self.body, self.shape)
+                    sound_net.play()
                     return None
         except BaseException:
             return False
@@ -204,6 +217,67 @@ def start_screen():
         clock.tick(FPS)
 
 
+# функция покупки скинов
+def shopping(pack_choose):
+    idd = pack_choose.index(True)
+    coins = cur.execute("SELECT coins FROM info").fetchone()[0]
+    price = cur.execute(f"SELECT ball_price FROM balls WHERE id = {idd}").fetchone()[0]
+    opened = cur.execute(f"SELECT opened FROM balls WHERE id = {idd}").fetchone()[0]
+    if opened == 'no' and int(coins) >= int(price):
+        print('УСПЕШНО')
+        cur.execute(f"UPDATE info SET coins = {coins - price}")
+        cur.execute(f"UPDATE info SET coins = {coins - price}")
+        cur.execute(f"UPDATE balls SET opened = 'yes' WHERE id = {idd}")
+        con.commit()
+        pygame.draw.rect(display, (85, 85, 85), (260, 10, 400, 70))
+        text = num.render(f' coins: {cur.execute("SELECT coins FROM info").fetchone()[0]}', True, (0, 255, 255))
+        display.blit(text, (260, 10))
+        return True
+    return False
+
+
+# функция отрисовки цены скина и замка в магазине
+def lock():
+    if cur.execute("SELECT opened FROM balls WHERE ball_name == 'volleyball.png'").fetchone()[0] == 'no':
+        display.blit(image_lock, (300, 270))
+        text = num.render(str(cur.execute("SELECT ball_price FROM balls "
+                                          "WHERE ball_name == 'volleyball.png'").fetchone()[0]),
+                          True, (0, 255, 255))
+        display.blit(text, (310, 420))
+    else:
+        pygame.draw.rect(display, (85, 85, 85), (300, 270, 75, 75))
+        pygame.draw.rect(display, (85, 85, 85), (310, 420, 80, 80))
+    if cur.execute("SELECT opened FROM balls WHERE ball_name == 'poo.png'").fetchone()[0] == 'no':
+        display.blit(image_lock, (400, 270))
+        text = num.render(str(cur.execute("SELECT ball_price FROM balls "
+                                          "WHERE ball_name == 'poo.png'").fetchone()[0]),
+                          True, (0, 255, 255))
+        display.blit(text, (385, 420))
+    else:
+        pygame.draw.rect(display, (85, 85, 85), (400, 270, 75, 75))
+        pygame.draw.rect(display, (85, 85, 85), (385, 420, 80, 80))
+    if cur.execute("SELECT opened FROM balls WHERE ball_name == 'smile.png'").fetchone()[0] == 'no':
+        display.blit(image_lock, (500, 270))
+        text = num.render(str(cur.execute("SELECT ball_price FROM balls "
+                                          "WHERE ball_name == 'smile.png'").fetchone()[0]),
+                          True, (0, 255, 255))
+        display.blit(text, (490, 420))
+    else:
+        pygame.draw.rect(display, (85, 85, 85), (500, 270, 75, 75))
+        pygame.draw.rect(display, (85, 85, 85), (490, 420, 80, 80))
+
+
+# функция выбора скинов
+def choose_skin(pack_choose):
+    idd = pack_choose.index(True)
+    ball = cur.execute(f"SELECT ball_name FROM balls WHERE id = {idd}").fetchone()[0]
+    opened = cur.execute(f"SELECT opened FROM balls WHERE id = {idd}").fetchone()[0]
+    if opened == 'yes':
+        cur.execute(f"UPDATE info SET ball_name = '{ball}'")
+        con.commit()
+
+
+# экран магазина
 def shop_screen():
     display.fill(pygame.Color(85, 85, 85))
     display.blit(image_button_up, (250, 600))
@@ -213,16 +287,17 @@ def shop_screen():
     display.blit(image_volleyball, (300, 350))
     display.blit(image_poo, (400, 350))
     display.blit(image_smile, (500, 350))
-    text = num.render(f'coins: {cur.execute("SELECT coins FROM info").fetchone()[0]}', True, (0, 255, 255))
+    text = num.render(f' coins: {cur.execute("SELECT coins FROM info").fetchone()[0]}', True, (0, 255, 255))
     display.blit(text, (260, 10))
-    if cur.execute("SELECT opened FROM balls WHERE ball_name == 'volleyball.png'").fetchone()[0] == 'no':
-        display.blit(image_lock, (300, 270))
-    if cur.execute("SELECT opened FROM balls WHERE ball_name == 'poo.png'").fetchone()[0] == 'no':
-        display.blit(image_lock, (400, 270))
-    if cur.execute("SELECT opened FROM balls WHERE ball_name == 'smile.png'").fetchone()[0] == 'no':
-        display.blit(image_lock, (500, 270))
+    lock()
     choose = [[180, 250], [282, 250], [382, 250], [482, 250]]
-    pack_choose = [True, False, False, False]
+    idd = cur.execute(f"SELECT id FROM balls WHERE ball_name = (SELECT ball_name FROM info)").fetchone()[0]
+    pack_choose = list()
+    for i in range(4):
+        if int(idd) == i:
+            pack_choose.append(True)
+        else:
+            pack_choose.append(False)
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -239,6 +314,13 @@ def shop_screen():
                     pack_choose = [False, False, True, False]
                 elif event.pos[0] >= 500 and event.pos[1] >= 250 and event.pos[0] <= 570 and event.pos[1] <= 400:
                     pack_choose = [False, False, False, True]
+                # нажатие на кнопку 'BUY'
+                elif event.pos[0] >= 250 and event.pos[1] >= 600 and event.pos[0] <= 530 and event.pos[1] <= 700:
+                    # описать успешная ли покупка или нет
+                    if shopping(pack_choose):
+                        lock()
+                    else:
+                        pass
             elif event.type == pygame.MOUSEMOTION:
                 # кнопка домой
                 if (event.pos[0] >= 21 and event.pos[1] >= 20) and (event.pos[0] <= 65 and event.pos[1] <= 80):
@@ -250,11 +332,6 @@ def shop_screen():
                     display.blit(image_button_down, (250, 600))
                 else:
                     display.blit(image_button_up, (250, 600))
-                # описать процесс покупки , случаи если не хватает денег , успешная покупка, работа с бд
-                #
-                #
-                #
-
         # 2 цикла для корректного отображения выбранного элемента(с 1 циклом некрасиво получается)
         for i in range(len(pack_choose)):
             if not pack_choose[i]:
@@ -262,22 +339,28 @@ def shop_screen():
         for i in range(len(pack_choose)):
             if pack_choose[i]:
                 pygame.draw.rect(display, (0, 255, 255), (choose[i][0], choose[i][1], 100, 175), 3)
+        choose_skin(pack_choose)
         display.blit(text_buy, (283, 607))
         pygame.display.flip()
         clock.tick(FPS)
 
 
+live = 5
 sec = 0
 walls = Walls()
 floor = Floor()
 pack_balls = list()
 PAUSE = False
 START = False
-
+UPDATE_SKIN = True
 while running:
     while not START:
         START = start_screen()
     if START == 'Play':
+        if UPDATE_SKIN:
+            image_ball = pygame.image.load(cur.execute("SELECT ball_name FROM info").fetchone()[0])
+            image_ball = pygame.transform.scale(image_ball, (ball_radius * 2, ball_radius * 2))
+            UPDATE_SKIN = False
         if not PAUSE:
             display.fill((0, 0, 0))
             for event in pygame.event.get():
@@ -298,9 +381,11 @@ while running:
             for i in range(len(pack_balls)):
                 if pack_balls[i]:
                     s = pack_balls[i].draw_update(floor.coords())
-                    if s is None:
+                    if s == 'live':
+                        live -= 1
+                    elif s is None:
                         n += 1
-                    if not s:
+                    elif not s:
                         pack_balls[i] = False
             # рисуем кольцо
             floor.draw()
@@ -309,6 +394,14 @@ while running:
             # счётчик набранных очков
             text = num.render(f'{n}', True, (200, 0, 0))
             display.blit(text, (670, 50))
+            # отображение жизней
+            x = 10
+            if live > 0:
+                for i in range(1, live + 1):
+                    display.blit(image_heart, (x, 10))
+                    x += 40
+            else:
+                print('die')
             pygame.display.update()
             clock.tick(FPS)
             pygame.event.pump()
@@ -335,6 +428,7 @@ while running:
         running = False
     elif START == 'Shop':
         SHOP = True
+        UPDATE_SKIN = True
         while SHOP:
             shop_do = shop_screen()
             if shop_do == 'Stop':
