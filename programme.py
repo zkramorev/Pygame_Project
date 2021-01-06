@@ -369,23 +369,66 @@ ONE_TIME = True
 # Для корректного отображения заработанных монет
 n_UPDATE = True
 # Счетчик для генерации мячей, пееменная для ускорения генерации мячей
-j, a = 200, 200
+j, a = 250, 150
+coins = 0
+r, g, b = 255, 255, 255
+R, G, B = True, False, False
+
 while running:
     while not START:
         START = start_screen()
     if START == 'Play':
         if not DIE and not PAUSE:
+            # это для того, чтобы мячи появлялись не слишком быстро
             j += 1
             if j - a > 0:
                 j = 0
-                a += 2
+                a += 1
                 pack_balls.append(Ball())
+
             if UPDATE_SKIN:
                 image_ball = pygame.image.load('data/' + cur.execute("SELECT ball_name FROM info").fetchone()[0])
                 image_ball = pygame.transform.scale(image_ball, (ball_radius * 2, ball_radius * 2))
                 UPDATE_SKIN = False
             if not PAUSE:
-                display.fill((0, 0, 0))
+                # если меньше 15 набранных очков - без усложнения, иначе фон будет менять цвета (это усложняет игру)
+                if n < 15:
+                    display.fill((0, 0, 0))
+                else:
+                    display.fill((r, g, b))
+                    if R:
+                        if r > 0:
+                            r -= 1
+                        else:
+                            R = False
+                            G = True
+                    else:
+                        if r < 254:
+                            r += 1
+                        else:
+                            R = True
+                    if G:
+                        if g > 0:
+                            g -= 1
+                        else:
+                            G = False
+                            B = True
+                    else:
+                        if g < 254:
+                            g += 1
+                        else:
+                            G = True
+                    if B:
+                        if b > 0:
+                            b -= 1
+                        else:
+                            B = False
+                            R = True
+                    else:
+                        if b < 254:
+                            b += 1
+                        else:
+                            B = True
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
                         running = False
@@ -446,6 +489,8 @@ while running:
                             sound_click.play()
                             START = False
                             PAUSE = not PAUSE
+                            n = 0
+                            live = 5
                             pack_balls = list()
                 text = num.render('PAUSE', True, (255, 255, 255))
                 text_home = num.render('  home', True, (0, 255, 255))
