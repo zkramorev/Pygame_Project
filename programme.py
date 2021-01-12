@@ -370,6 +370,7 @@ ONE_TIME = True
 n_UPDATE = True
 # Счетчик для генерации мячей, пееменная для ускорения генерации мячей
 j, a = 250, 150
+koef = 0.5
 coins = 0
 r, g, b = 255, 255, 255
 R, G, B = True, False, False
@@ -383,9 +384,9 @@ while running:
             j += 1
             if j - a > 0:
                 j = 0
-                a += 1
+                a += koef
                 pack_balls.append(Ball())
-
+                koef += 0.015
             if UPDATE_SKIN:
                 image_ball = pygame.image.load('data/' + cur.execute("SELECT ball_name FROM info").fetchone()[0])
                 image_ball = pygame.transform.scale(image_ball, (ball_radius * 2, ball_radius * 2))
